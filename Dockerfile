@@ -1,4 +1,4 @@
-FROM alpine:3.17
+FROM node:jod-alpine
 
 ENV LANG="C.UTF-8" \
     PS1="$(whoami)@$(hostname):$(pwd)$ " \
@@ -9,11 +9,11 @@ ENV LANG="C.UTF-8" \
     TERM="xterm-256color"
 
 COPY . /app/ring-mqtt
-RUN S6_VERSION="v3.1.5.0" && \
-    BASHIO_VERSION="v0.15.0" && \
-    GO2RTC_VERSION="v1.7.1" && \
+RUN S6_VERSION="v3.2.2.0" && \
+    BASHIO_VERSION="v0.17.5" && \
+    GO2RTC_VERSION="v1.9.14" && \
     APK_ARCH="$(apk --print-arch)" && \
-    apk add --no-cache tar xz git libcrypto3 libssl3 musl-utils musl bash curl jq tzdata nodejs npm mosquitto-clients && \
+    apk add --no-cache tar xz git bash curl jq tzdata mosquitto-clients && \
     curl -L -s "https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-noarch.tar.xz" | tar -Jxpf - -C / && \
     case "${APK_ARCH}" in \
         aarch64|armhf|x86_64) \
@@ -43,6 +43,7 @@ RUN S6_VERSION="v3.1.5.0" && \
     esac && \
     curl -L -s -o /usr/local/bin/go2rtc "https://github.com/AlexxIT/go2rtc/releases/download/${GO2RTC_VERSION}/go2rtc_linux_${GO2RTC_ARCH}" && \
     chmod +x /usr/local/bin/go2rtc && \
+    rm -rf /app/ring-mqtt/bin && \
     curl -J -L -o /tmp/bashio.tar.gz "https://github.com/hassio-addons/bashio/archive/${BASHIO_VERSION}.tar.gz" && \
     mkdir /tmp/bashio && \
     tar zxvf /tmp/bashio.tar.gz --strip 1 -C /tmp/bashio && \

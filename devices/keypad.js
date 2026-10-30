@@ -17,6 +17,7 @@ export default class Keypad extends RingSocketDevice {
             ...this.entity,
             volume: {
                 component: 'number',
+                category: 'config',
                 min: 0,
                 max: 100,
                 mode: 'slider',
@@ -29,6 +30,7 @@ export default class Keypad extends RingSocketDevice {
             },
             chirps: {
                 component: 'switch',
+                category: 'config',
                 icon: 'mdi:bird'
             }
         }
@@ -41,6 +43,7 @@ export default class Keypad extends RingSocketDevice {
                 message.body?.[0]?.general?.v2?.zid === this.deviceId &&
                 message.body[0].impulse?.v1?.[0]?.impulseType === 'keypad.motion'
             ) {
+                this.debug('Received a keypad motion event')
                 this.processMotion()
             }
         })

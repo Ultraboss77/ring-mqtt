@@ -26,6 +26,7 @@ export default class Chime extends RingPolledDevice {
             ...this.entity,
             volume: {
                 component: 'number',
+                category: 'config',
                 min: 0,
                 max: 11,
                 mode: 'slider',
@@ -38,6 +39,7 @@ export default class Chime extends RingPolledDevice {
             },
             snooze_minutes: {
                 component: 'number',
+                category: 'config',
                 min: 1,
                 max: 1440,
                 mode: 'box',
@@ -54,12 +56,14 @@ export default class Chime extends RingPolledDevice {
             ...this.device.data.settings.night_light_settings?.hasOwnProperty('light_sensor_enabled') ? {
                 nightlight_enabled: {
                     component: 'switch',
+                    category: 'config',
                     icon: "mdi:lightbulb-night",
                     attributes: true
                 }
             } : {},
             info: {
                 component: 'sensor',
+                category: 'diagnostic',
                 device_class: 'timestamp',
                 value_template: '{{ value_json["lastUpdate"] | default("") }}'
             }
@@ -78,6 +82,7 @@ export default class Chime extends RingPolledDevice {
     initAttributeEntities() {
         this.entity.wireless = {
             component: 'sensor',
+            category: 'diagnostic',
             device_class: 'signal_strength',
             unit_of_measurement: 'dBm',
             parent_state_topic: 'info/state',
@@ -96,7 +101,7 @@ export default class Chime extends RingPolledDevice {
             this.data.volume = volumeState
         }
 
-        const snoozeState = Boolean(this.device.data.do_not_disturb.seconds_left) ? 'ON' : 'OFF'
+        const snoozeState = this.device.data.do_not_disturb.seconds_left ? 'ON' : 'OFF'
         if (snoozeState !== this.data.snooze || isPublish) {
             this.mqttPublish(this.entity.snooze.state_topic, snoozeState)
             this.data.snooze = snoozeState

@@ -122,6 +122,7 @@ export default class Camera extends RingPolledDevice {
             },
             stream: {
                 component: 'switch',
+                category: 'diagnostic',
                 attributes: true,
                 name: 'Live Stream',
                 icon: 'mdi:cctv',
@@ -130,6 +131,7 @@ export default class Camera extends RingPolledDevice {
             },
             event_stream: {
                 component: 'switch',
+                category: 'diagnostic',
                 attributes: true,
                 icon: 'mdi:vhs',
                 // Use internal MQTT server for inter-process communications
@@ -137,6 +139,7 @@ export default class Camera extends RingPolledDevice {
             },
             event_select: {
                 component: 'select',
+                category: 'config',
                 options: [
                     ...this.device.isDoorbot
                         ? [ 'Ding 1', 'Ding 2', 'Ding 3', 'Ding 4', 'Ding 5',
@@ -181,6 +184,7 @@ export default class Camera extends RingPolledDevice {
             },
             snapshot_mode: {
                 component: 'select',
+                category: 'config',
                 options: [
                     ...this.device.isDoorbot
                         ? [
@@ -192,6 +196,7 @@ export default class Camera extends RingPolledDevice {
             },
             snapshot_interval: {
                 component: 'number',
+                category: 'config',
                 min: 10,
                 max: 604800,
                 mode: 'box',
@@ -202,15 +207,18 @@ export default class Camera extends RingPolledDevice {
                 icon: 'mdi:camera'
             },
             motion_detection: {
-                component: 'switch'
+                component: 'switch',
+                category: 'config'
             },
             ...this.device.data.features?.motion_message_enabled ? {
                 motion_warning: {
-                    component: 'switch'
+                    component: 'switch',
+                    category: 'config'
                 }
             } : {},
             motion_duration: {
                 component: 'number',
+                category: 'config',
                 min: 10,
                 max: 180,
                 mode: 'box',
@@ -219,6 +227,7 @@ export default class Camera extends RingPolledDevice {
             ...this.device.isDoorbot ? {
                 ding_duration: {
                     component: 'number',
+                    category: 'config',
                     min: 10,
                     max: 180,
                     icon: 'hass:timer'
@@ -226,6 +235,7 @@ export default class Camera extends RingPolledDevice {
             } : {},
             info: {
                 component: 'sensor',
+                category: 'diagnostic',
                 device_class: 'timestamp',
                 value_template: '{{ value_json["lastUpdate"] | default("") }}'
             }
@@ -299,6 +309,7 @@ export default class Camera extends RingPolledDevice {
         if (deviceHealth && !(deviceHealth?.network_connection && deviceHealth.network_connection === 'ethernet')) {
             this.entity.wireless = {
                 component: 'sensor',
+                category: 'diagnostic',
                 device_class: 'signal_strength',
                 unit_of_measurement: 'dBm',
                 parent_state_topic: 'info/state',
@@ -311,6 +322,7 @@ export default class Camera extends RingPolledDevice {
         if (this.device.batteryLevel || this.hasBattery1 || this.hasBattery2) {
             this.entity.battery = {
                 component: 'sensor',
+                category: 'diagnostic',
                 device_class: 'battery',
                 unit_of_measurement: '%',
                 state_class: 'measurement',
@@ -473,19 +485,17 @@ export default class Camera extends RingPolledDevice {
     async processNotification(pushData) {
         let dingKind
         // Is it a motion or doorbell ding? (for others we do nothing)
-        switch (pushData.action) {
-            case 'com.ring.push.HANDLE_NEW_DING':
+        switch (pushData.android_config?.category) {
+            case 'com.ring.pn.live-event.ding':
                 dingKind = 'ding'
                 break
-            case 'com.ring.push.HANDLE_NEW_motion':
+            case 'com.ring.pn.live-event.motion':
                 dingKind = 'motion'
                 break
             default:
                 this.debug(`Received push notification of unknown type ${pushData.action}`)
                 return
         }
-        const ding = pushData.ding
-        ding.created_at = Math.floor(Date.now()/1000)
         this.debug(`Received ${dingKind} push notification, expires in ${this.data[dingKind].duration} seconds`)
 
         // Is this a new Ding or refresh of active ding?
@@ -493,19 +503,19 @@ export default class Camera extends RingPolledDevice {
         this.data[dingKind].active_ding = true
 
         // Update last_ding and expire time
-        this.data[dingKind].last_ding = ding.created_at
-        this.data[dingKind].last_ding_time = utils.getISOTime(ding.created_at*1000)
+        this.data[dingKind].last_ding = Math.floor(pushData.data?.event?.eventito?.timestamp/1000)
+        this.data[dingKind].last_ding_time = pushData.data?.event?.ding?.created_at
         this.data[dingKind].last_ding_expires = this.data[dingKind].last_ding+this.data[dingKind].duration
 
         // If motion ding and snapshots on motion are enabled, publish a new snapshot
         if (dingKind === 'motion') {
-            this.data[dingKind].is_person = Boolean(ding.detection_type === 'human')
+            this.data[dingKind].is_person = Boolean(pushData.data?.event?.ding?.detection_type === 'human')
             if (this.data.snapshot.motion) {
-                this.refreshSnapshot('motion', ding.image_uuid)
+                this.refreshSnapshot('motion', pushData?.img?.snapshot_uuid)
             }
         } else if (this.data.snapshot.ding) {
             // If doorbell press and snapshots on ding are enabled, publish a new snapshot
-            this.refreshSnapshot('ding', ding.image_uuid)
+            this.refreshSnapshot('ding', pushData?.img?.snapshot_uuid)
         }
 
         // Publish MQTT active sensor state

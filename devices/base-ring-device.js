@@ -15,7 +15,7 @@ export default class RingDevice {
         }
 
         this.debug = (message, debugType) => {
-            utils.debug(debugType === 'disc' ? message : chalk.green(`[${this.deviceData.name}] `)+message, debugType ? debugType : 'mqtt')
+            utils.debug(debugType === 'disc' ? message : chalk.green(`[${this.deviceData.name}] `)+message, debugType || 'mqtt')
         }
         // Build device base and availability topic
         this.deviceTopic = `${utils.config().ring_topic}/${this.locationId}/${category}/${this.deviceId}`
@@ -70,7 +70,7 @@ export default class RingDevice {
                         : entity.component === 'camera'
                             ? { topic: entityStateTopic }
                             : {},
-                ...entity.component.match(/^(switch|number|light|fan|lock|alarm_control_panel|select|button)$/)
+                ...entity.component.match(/^(switch|number|light|fan|lock|alarm_control_panel|select|button|valve)$/)
                     ? { command_topic: `${entityTopic}/command` }
                     : {},
                 ...entity.hasOwnProperty('device_class')
@@ -94,6 +94,9 @@ export default class RingDevice {
                 ...entity.hasOwnProperty('mode')
                     ? { mode: entity.mode }
                     : {},
+                ...entity.hasOwnProperty('category')
+                    ? { entity_category: entity.category }
+                    : {},
                 ...entity.hasOwnProperty('attributes')
                     ? { json_attributes_topic: `${entityTopic}/attributes` }
                     : entityKey === "info"
@@ -106,11 +109,12 @@ export default class RingDevice {
                         : {},
                 ...entity.component === 'alarm_control_panel'
                     ? { supported_features: ['arm_home', 'arm_away'],
+                        code_arm_required: false,
+                        code_disarm_required: Boolean(utils.config().disarm_code),
                         ...utils.config().disarm_code
-                            ? { code: utils.config().disarm_code.toString(),
-                                code_arm_required: false,
-                                code_disarm_required: true
-                            } : {} }
+                            ? { code: utils.config().disarm_code.toString() }
+                            : {}
+                        }
                     : {},
                 ...entity.hasOwnProperty('brightness_scale')
                     ? { brightness_state_topic: `${entityTopic}/brightness_state`,

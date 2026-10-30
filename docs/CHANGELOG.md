@@ -1,3 +1,180 @@
+## v5.9.3
+**Bugs Fixed**
+ - Updated ring-client-api with patched push-receiver package to address push messages failing decryption with ERR_CRYPTO_ECDH_INVALID_PUBLIC_KEY message, potentially leading to missed motion/ding events for cameras/doorbells/intercoms.
+ - Fix crash due to unexpected security panel when users only have a Sidewalk based Ring device such as Kiddie Smoke/CO detector
+ - Fix Kiddie Smoke/CO states not properly updated during smoke/co detection events (testing welcome)
+ - Implement minor changes to attempt to address sporadic authentication issues reported by a small number of users
+
+**Dependency Updates**
+ - aedes 1.0.0
+ - body-parser 2.2.2
+ - mqtt 5.15.0
+ - ring-client-api 14.3.1-beta.0 (custom)
+ - werift 0.22.9
+ - write-file-atomic 7.0.1
+ - Go2RTC 1.9.14
+
+## v5.9.2
+This update attempts to workaround an issue causing MQTT automatic discovery to fail randomly in a small number of cases.  As far as I can tell, this is an upstream issue as the API is reporting the MQTT service unavailable even though the Mosquitto addon is running and HA is connected.  The new code simply checks that the MQTT service exist and uses the crednetials in any case, ignoring the reported service status.  I have no idea if this will fix the reported issue as this code hasn't been touched in ages and I can't reproduce the issue, but I saw some other addons that made similar changes in recent months, so I thought it was worth a shot.
+
+**Dependency Updates**
+ - Go2RTC 1.9.12 (revert to upstream version as exec hang issues appear to be fixed now)
+
+## v5.9.1
+**Bugs Fixed**
+Fix an issue introduced with new Express server that kept web authenticator UI from starting.
+
+## v5.9.0
+This is mostly a depedency update after a long while without any updates, but I bumped the minor version as this should also enable experimental support for the following new devices:
+
+ - The Ring Video Intercom should now be detected, however, functionality is limited to the same features supported with prior non-Video version (i.e. no video features)
+ - The Kiddie Smoke/CO devices should be detected, however, this is the first supported non-Zwave alarm device and I have no idea if state updates will actually work as I do not have this hardware to test.  Success or failure reports are highly appreciated.
+
+**Dependency Updates**
+ - @homebridge/camera-utils 3.0.0
+ - body-parser 2.2.1"
+ - chalk 5.6.2
+ - debug 4.4.3
+ - express 5.2.1
+ - is-online 12.0.2
+ - js-yaml 4.1.1
+ - mqtt 5.14.1
+ - ring-client-api 14.2.0
+ - werift 0.22.2
+ - write-file-atomic 7.0.0
+ - NodeJs 22.21.1
+ - Bashio 0.17.5
+ - go2rtc 1.9.12
+
+## v5.8.1
+**Bugs Fixed**
+Update ring-client-api to address a recent Ring API change which caused socket connections to fail and crash the ring-mqtt process.
+
+**Dependency Updates**
+ - chalk 5.4.1
+ - mqtt 5.13.0
+ - ring-client-api 14.0.0-beta.2
+ - rxjs 7.8.2
+ - werift 0.22.1
+ - NodeJS 22.12.0
+ - S6 Overlay 3.2.1.0
+ - Bashio 0.17.0
+
+## v5.8.0
+The 5.8.x branch is focused primarily on cleaning up various portions of the code to improve long-term maintainability, there are no major features planned for this branch.
+
+**Minor Enhancements**
+- The web based authenticator has been completely re-written in this release. It now serves an singlem dynamic html document, from memory, properly displays error messages, more safely handles sensitive data such as passwords/2fa codes (information is deleted from session state immediately after it is submitted) and uses an updated theme that integrates more cleanly into the Home Assistant UI, including automatic support for light/dark mode.
+
+**Dependency Updates**
+ - @homebridge/camera-utils 2.2.7
+ - debug 4.4.0
+ - expess 4.21.2
+ - mqtt 5.10.3
+ - ring-client-api 13.2.1
+ - NodeJS 22.12.0
+
+## v5.7.3
+**Minor Enhancements**
+- Instead of silently blocking device discovery, offline hubs will now be listed in the log which should make it easier for users to identify the device causing the issue.
+- Updated ring-client-api now uses long-lived HTTPS connections, improving performance and dramtically reducing the number of DNS queries and firewall connections logged, which could previously make dozens, or even hundreds of queries per minute.
+- Suppress spurious 'Message dropped as it could not be decrypted' messages from push-receiver which didn't cause any problems but just seemed to confuse people.
+
+**Bugs Fixed**
+- Upated ring-client-api uses long-lived HTTPS connections which should work around the hangs experienced in some environments during startup.  Much thanks to @RoryJMc for amazing help testing and providing logs which finally led to a solution to this issue.
+
+**Dependency Updates**
+- mqtt 5.10.2
+- ring-client-api 13.2.1-beta.0
+
+## v5.7.2
+**Bugs Fixed**
+- Fix an isse that caused push notifications for camera/doorbell/intercom motion and ding events to stop working after interruptions in network connectivity lasting more than a few minutes.
+- Fix an issue with Modes where the incorrect mode was sometimes published during initial startup.  Thanks to @wahflz for the PR to address this!
+- Fix a locking issue which prevented live and event streams from being active concurrently on the same camera.
+
+**Dependency Updates**
+- aedes 0.51.3
+- body-parser 1.20.3
+- date-fns 4.1.0
+- debug 4.3.7
+- express 4.21.1
+- ffmpeg 7.0.2
+- is-online 11.0.0
+- mqtt 5.10.1
+- node 22.11.0
+- push-receiver 4.3.0
+- ring-client-api 13.2.0-beta.1
+- s6-overlay v3.2.0.2
+- werift 0.20.1
+- write-file-atomic 6.0.0
+
+## v5.7.1
+**New Features**
+- Add experimental support for Zooz water valves.  This support is currently untested, but was developed using user data dumps kindly contributed from several users and also based on a similar PR submitted for ring-homebridge from another user.  Please feel free to open an issue on the Github project page if you have problems with this device and thanks to all involved for their support.
+
+**Dependency Updates**
+- ring-client-api v13.1.0
+
+## v5.7.0
+This release migrates to the new FCM HTTP v1 API for push notifications as the legacy FCM/GCM APIs have been deprecated for some time and shutdown of those legacy APIs started in late July 2024.  While the transition to this new API should be transparent for most users, the under the hood changes are signfiicant including an entirely new push notification format.  While the goal is to make this transition as seemless as possible, it is impossible to guarantee 100% success.  If you experience issues with motion/ding notification from cameras, doorbells or intercoms after upgrading to this version, please follow the standard push notification troubleshooting steps as follows:
+
+1) Open the ring-mqtt web UI and note the device name
+2) Stop the ring-mqtt addon/container
+3) Navigate to the Ring Control Center using the Ring App or Ring Web console
+4) Locate the device with the matching device name from step 1 in Authorized Client Devices and delete it
+5) Restart the addon and use the addon web UI to re-authenticate to the Ring API
+
+**Minor Enhancements**
+- A significant amount of work has gone into improving the reliability of streaming, especially the live stream.  In prior versions there were various failure scenarios that could lead to states where future streaming requests would not succeed and the only option was to restart the entire addon/container.  Hours of testing have gone into this version and many such issues have been addressed.
+
+**Dependency Updates**
+- ring-client-api v13.0.1
+- go2rtc v1.9.4 (custom build to fix a hang on exit issue)
+- Alpine Linux 3.20.2
+- NodeJS v20.15.1
+- s6-overlay v3.2.0.0
+
+## v5.6.7
+This release is intended to address an ongoing instability with websocket connections by using a newer API endpoint for requesting tickets.
+
+**Dependency Updates**
+- ring-client-api v12.1.1
+
+## v5.6.6
+This release reverts go2rtc to v1.9.2 to address streaming stability issues caused by exec handling changes that were implemented in go2rtc v1.9.3.
+
+**Dependency Updates**
+- aedes v0.51.2
+- debug v4.3.5
+
+## v5.6.5
+This release is intended to address the current brokenness of HA 2024.6.x by forcing the alarm control panel entity discovery to set code_arm_required = false even when no code is configured.  While I believe this should be fixed in upstream HA, I have no influence over if/when that will happen and this workaround should have no negative impact on older versions.
+
+**Dependency Updates**
+- go2rtc v1.9.3
+- mqtt v5.7.0
+- werift v0.19.3
+
+## v5.6.4
+**Minor Enhancements**
+- New attributes alarmClearedBy/alarmClearedTime are updated when alarm is in triggered state and is cleared via the keypad or app.
+- Some entities now have categories assigned so that they appear in Configuration and Diagnostic categories in the Home Assistant UI.  This also means that these entities will not be automatically included in generated views, for example, when exporting devices from Home Assitant to another platform like HomeKit, although you can still manually choose to export those entities if desired. Thanks to @xannor for initial PR for this feature.
+
+**Bugs fixed**
+- Fixed an issue where the alarm state would lose syncronization if alarm was disarmed but a fire/co alarm was triggered and then cleared.  Thanks to @iptvcld for reporting this issue and providng the details required to reproduce.
+
+**Dependcy Updates**
+- Alpine Linux 3.18 (Docker image)
+- go2rtc v1.8.5
+- ring-client-api v12.1.0
+- werift v0.19.1
+- aedes v0.51.0
+- mqtt v5.5.2
+- express v4.19.2
+- s6-overlay v3.1.6.2
+- bashio v0.16.2
+
 ## v5.6.3
 **Minor Enhancements**
 - lastArmBy/lastDisarmBy now reports correct names for guest users as well as shared users
